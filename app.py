@@ -1,15 +1,77 @@
-from flask import Flask 
-
+from flask import Flask, request, jsonify
+from models.task import Task
 #__name__= "__main__"
 app = Flask(__name__)
 
-@app.route("/")
-def olha_mundo():
-    return "eu não aguento mais Olá, Mundo!"
+# Crud - Create, Read, Update, Delete
+# tabela: tarefa
 
-@app.route("/about") #=sobre
-def about():
-    return "Pagina sobre"
+tasks = []
+task_id_control = 1
+
+@app.route('/tasks', methods=['POST'])
+def create_task():
+    global task_id_control
+    data = request.get_json()
+    new_task = Task(id=task_id_control, title=data['title'], description=data.get ("description", ""))
+    task_id_control += 1
+    tasks.append(new_task)
+    print (tasks)
+    return jsonify({"message": "Task created successfully" })
+
+
+@app.route('/tasks', methods=['GET'])
+def get_tasks():
+    task_list = [task.to_dict() for task in tasks  ]
+   
+    output = { 
+        "tasks": task_list,
+        "total_tasks":len(task_list)
+    }
+    return jsonify(output)
+
+@app.route('/tasks/<int:task_id>', methods=['GET'])
+def get_task(task_id):
+    for t in tasks:
+        if t.id == task_id:
+            return jsonify(t.to_dict())
+        
+    return jsonify({"message": "Task not found"}), 404
+
+@app.route('/tasks/<int:task_id>', methods=['PUT'])
+def update_task(task_id):
+
+    task = None
+    for t in tasks:
+        if t.id == task_id:
+            task = t
+            break
+    
+    if task == None:
+        return jsonify ({"message": "Task not found"}), 404
+    
+    data = request.get_json()
+    task.title = data['title']
+    task.description = data['description']
+    task.completed = data['completed']
+    
+    return jsonify ({"message": "Task updated successfully"})
+
+@app.route('/tasks/<int:task_id>', methods=['DELETE'])
+def delete_task(task_id):
+   task = None
+   for t in tasks:
+       if t.id == task_id:
+           task = t
+           break
+           
+   if not task:
+        return jsonify({"message": "Task not found"}), 404
+   
+   tasks.remove(task)
+   return jsonify({"message": "Task deleted successfully"})
+
 
 if __name__ == "__main__":
-    app.run(debug=True) #e usado para desenvolvimento local (ou seja na minha maquina )
+    app.run(debug=True)
+
